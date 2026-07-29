@@ -26,8 +26,8 @@ android {
         }
         val apiKey = localProperties.getProperty("WORLD_NEWS_API_KEY") ?: ""
 
-        // Expose API Key to BuildConfig
-        buildConfigField("STRING", "WORLD_NEWS_API_KEY", "\"$apiKey\"")
+        // Expose API Key to BuildConfig (Note the uppercase String type)
+        buildConfigField("String", "WORLD_NEWS_API_KEY", "\"$apiKey\"")
     }
 
     buildTypes {
