@@ -1,4 +1,4 @@
-package com.st10445368.gitbbc.navigaton
+package com.st10445368.gitbbc.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
@@ -10,14 +10,14 @@ import kotlinx.serialization.Serializable
 @Serializable object SearchRoute
 @Serializable object SettingsRoute
 
-// Structured object to map destinations to the Bottom Bar UI elements
+// Map destinations to Bottom Bar UI items
 sealed class BottomBarItem<T : Any>(
     val route: T,
     val title: String,
     val icon: ImageVector
 ) {
-    object Search : BottomBarItem<SearchRoute>(SearchRoute, "Search", Icons.Default.Search)
-    object Settings : BottomBarItem<SettingsRoute>(SettingsRoute, "Settings", Icons.Default.Settings)
+    data object Search : BottomBarItem<SearchRoute>(SearchRoute, "Search", Icons.Default.Search)
+    data object Settings : BottomBarItem<SettingsRoute>(SettingsRoute, "Settings", Icons.Default.Settings)
 }
 
 val bottomNavItems = listOf(

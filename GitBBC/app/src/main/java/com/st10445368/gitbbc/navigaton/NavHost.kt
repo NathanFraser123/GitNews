@@ -1,4 +1,4 @@
-package com.st10445368.gitbbc.navigaton
+package com.st10445368.gitbbc.navigation
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
@@ -19,12 +19,9 @@ import androidx.navigation.compose.rememberNavController
 import com.st10445368.gitbbc.ui.Screens.SearchScreen
 import com.st10445368.gitbbc.ui.Screens.SettingsScreen
 
-
 @Composable
 fun MainAppContainer() {
     val navController = rememberNavController()
-
-    // Track the current back stack entry to see which destination is active
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
 
@@ -32,7 +29,6 @@ fun MainAppContainer() {
         bottomBar = {
             NavigationBar {
                 bottomNavItems.forEach { item ->
-                    // Correctly check if the current route tree matches the destination
                     val isSelected = currentDestination?.hierarchy?.any {
                         it.hasRoute(item.route::class)
                     } == true
@@ -43,15 +39,10 @@ fun MainAppContainer() {
                         icon = { Icon(imageVector = item.icon, contentDescription = item.title) },
                         onClick = {
                             navController.navigate(item.route) {
-                                // Pop up to the start destination of the graph to
-                                // avoid building up a huge stack of destinations
                                 popUpTo(navController.graph.findStartDestination().id) {
                                     saveState = true
                                 }
-                                // Avoid multiple copies of the same destination when
-                                // reselecting the same item
                                 launchSingleTop = true
-                                // Restore state when reselecting a previously selected item
                                 restoreState = true
                             }
                         }
@@ -60,7 +51,6 @@ fun MainAppContainer() {
             }
         }
     ) { innerPadding ->
-        // The NavHost controls what screen file gets loaded inside the content area
         NavHost(
             navController = navController,
             startDestination = SearchRoute,
@@ -68,9 +58,8 @@ fun MainAppContainer() {
         ) {
             composable<SearchRoute> {
                 SearchScreen(
-                    onArticleClick = { ArticleId ->
-                        // Future: Navigate to detail screen passing the bookId
-                        // navController.navigate(DetailRoute(bookId))
+                    onArticleClick = { articleId ->
+                        // Reserved for detail screen navigation if added later
                     }
                 )
             }
