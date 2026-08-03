@@ -1,6 +1,5 @@
 package com.st10445368.gitbbc.ui.viewmodel
 
-
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -10,11 +9,13 @@ import com.st10445368.gitbbc.location.CountryGeocoder
 import com.st10445368.gitbbc.location.LocationHelper
 import com.st10445368.gitbbc.models.CountryData
 import com.st10445368.gitbbc.ui.state.NewsUiState
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class NewsViewModel(
     private val repository: NewsRepository = NewsRepository()
@@ -24,11 +25,6 @@ class NewsViewModel(
     val uiState: StateFlow<NewsUiState> = _uiState.asStateFlow()
 
     private val pageSize = 20
-
-    init {
-        // Initial fetch using default country (South Africa - za)
-        fetchNews(isRefresh = true)
-    }
 
     /**
      * Fetches news articles for the active country, category, and pagination offset.
@@ -51,42 +47,53 @@ class NewsViewModel(
             _uiState.update { it.copy(isLoadingMore = true, errorMessage = null) }
         }
 
-        val targetOffset = if (isRefresh) 0 else currentState.currentOffset
-
         viewModelScope.launch {
-            val result = repository.getNews(
-                countryCode = _uiState.value.selectedCountryCode,
-                category = _uiState.value.selectedCategory,
-                queryText = _uiState.value.searchQuery,
-                offset = targetOffset,
-                pageSize = pageSize
-            )
+            try {
+                val targetOffset = if (isRefresh) 0 else _uiState.value.currentOffset
 
-            when (result) {
-                is NewsResult.Success -> {
-                    _uiState.update { state ->
-                        val updatedList = if (isRefresh) result.articles else state.articles + result.articles
-                        state.copy(
-                            articles = updatedList,
-                            isLoading = false,
-                            isLoadingMore = false,
-                            isEndReached = result.isEndReached,
-                            totalResults = result.totalAvailable,
-                            currentOffset = targetOffset + result.articles.size,
-                            errorMessage = null,
-                            errorType = null
-                        )
+                val result = repository.getNews(
+                    countryCode = _uiState.value.selectedCountryCode,
+                    category = _uiState.value.selectedCategory,
+                    queryText = _uiState.value.searchQuery,
+                    offset = targetOffset,
+                    pageSize = pageSize
+                )
+
+                when (result) {
+                    is NewsResult.Success -> {
+                        _uiState.update { state ->
+                            val updatedList = if (isRefresh) result.articles else state.articles + result.articles
+                            state.copy(
+                                articles = updatedList,
+                                isLoading = false,
+                                isLoadingMore = false,
+                                isEndReached = result.isEndReached,
+                                totalResults = result.totalAvailable,
+                                currentOffset = targetOffset + result.articles.size,
+                                errorMessage = null,
+                                errorType = null
+                            )
+                        }
+                    }
+                    is NewsResult.Error -> {
+                        _uiState.update { state ->
+                            state.copy(
+                                isLoading = false,
+                                isLoadingMore = false,
+                                errorMessage = result.message,
+                                errorType = result.type
+                            )
+                        }
                     }
                 }
-                is NewsResult.Error -> {
-                    _uiState.update { state ->
-                        state.copy(
-                            isLoading = false,
-                            isLoadingMore = false,
-                            errorMessage = result.message,
-                            errorType = result.type
-                        )
-                    }
+            } catch (e: Exception) {
+                // Guarantees isLoading is reset to false if an unhandled exception occurs
+                _uiState.update { state ->
+                    state.copy(
+                        isLoading = false,
+                        isLoadingMore = false,
+                        errorMessage = e.localizedMessage ?: "An unexpected error occurred while fetching news."
+                    )
                 }
             }
         }
@@ -123,37 +130,48 @@ class NewsViewModel(
         _uiState.update { it.copy(isLocationLoading = true) }
 
         viewModelScope.launch {
-            val locationHelper = LocationHelper(context)
-            val geocoder = CountryGeocoder(context)
+            try {
+                val (location, geoResult) = withContext(Dispatchers.IO) {
+                    val locationHelper = LocationHelper(context)
+                    val geocoder = CountryGeocoder(context)
 
-            val location = locationHelper.getCurrentLocation()
-            if (location != null) {
-                val geoResult = geocoder.getCountryFromCoordinates(location.latitude, location.longitude)
-                if (geoResult != null) {
-                    _uiState.update { state ->
-                        state.copy(
-                            userLatitude = geoResult.latitude,
-                            userLongitude = geoResult.longitude,
-                            selectedCountryCode = geoResult.countryCode,
-                            selectedCountryName = geoResult.countryName,
-                            isLocationLoading = false
-                        )
+                    val loc = locationHelper.getCurrentLocation()
+                    val geo = if (loc != null) {
+                        geocoder.getCountryFromCoordinates(loc.latitude, loc.longitude)
+                    } else null
+
+                    Pair(loc, geo)
+                }
+
+                if (location != null) {
+                    if (geoResult != null) {
+                        _uiState.update { state ->
+                            state.copy(
+                                userLatitude = geoResult.latitude,
+                                userLongitude = geoResult.longitude,
+                                selectedCountryCode = geoResult.countryCode,
+                                selectedCountryName = geoResult.countryName,
+                                isLocationLoading = false
+                            )
+                        }
+                    } else {
+                        _uiState.update { state ->
+                            state.copy(
+                                userLatitude = location.latitude,
+                                userLongitude = location.longitude,
+                                isLocationLoading = false
+                            )
+                        }
                     }
                 } else {
-                    _uiState.update { state ->
-                        state.copy(
-                            userLatitude = location.latitude,
-                            userLongitude = location.longitude,
-                            isLocationLoading = false
-                        )
-                    }
+                    _uiState.update { it.copy(isLocationLoading = false) }
                 }
-            } else {
+            } catch (e: Exception) {
                 _uiState.update { it.copy(isLocationLoading = false) }
+            } finally {
+                // Always fetch news with updated or default country code
+                fetchNews(isRefresh = true)
             }
-
-            // Refresh news with updated country code
-            fetchNews(isRefresh = true)
         }
     }
 

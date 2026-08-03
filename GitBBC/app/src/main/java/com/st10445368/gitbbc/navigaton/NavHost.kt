@@ -20,7 +20,11 @@ import com.st10445368.gitbbc.ui.Screens.SearchScreen
 import com.st10445368.gitbbc.ui.Screens.SettingsScreen
 
 @Composable
-fun MainAppContainer() {
+fun MainAppContainer(
+    onSignOut: () -> Unit,
+    biometricEnabled: Boolean,
+    onToggleBiometric: (Boolean) -> Unit
+) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
@@ -65,7 +69,11 @@ fun MainAppContainer() {
             }
 
             composable<SettingsRoute> {
-                SettingsScreen()
+                SettingsScreen(
+                    onSignOut = onSignOut,
+                    biometricEnabled = biometricEnabled,
+                    onToggleBiometric = onToggleBiometric
+                )
             }
         }
     }

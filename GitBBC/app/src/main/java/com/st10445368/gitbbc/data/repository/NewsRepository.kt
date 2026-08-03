@@ -1,17 +1,19 @@
 package com.st10445368.gitbbc.data.repository
 
-
 import com.st10445368.gitbbc.BuildConfig
 import com.st10445368.gitbbc.data.NetworkModule
 import com.st10445368.gitbbc.data.WorldNewsApiService
-
 import com.st10445368.gitbbc.util.DateUtils
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import retrofit2.HttpException
 import java.io.IOException
 
 class NewsRepository(
-    private val apiService: WorldNewsApiService = NetworkModule.apiService
+    // Use lazy initialization so NetworkModule.apiService isn't instantiated on the main thread during constructor call
+    private val getApiService: () -> WorldNewsApiService = { NetworkModule.apiService }
 ) {
+    private val apiService by lazy { getApiService() }
 
     /**
      * Fetches news articles from World News API with pagination support.
@@ -22,18 +24,18 @@ class NewsRepository(
         queryText: String? = null,
         offset: Int = 0,
         pageSize: Int = 20
-    ): NewsResult {
+    ): NewsResult = withContext(Dispatchers.IO) {
         val apiKey = BuildConfig.WORLD_NEWS_API_KEY
 
         // Check for missing API Key before making request
         if (apiKey.isBlank()) {
-            return NewsResult.Error(
+            return@withContext NewsResult.Error(
                 message = "API key is missing. Please add WORLD_NEWS_API_KEY to local.properties.",
                 type = ErrorType.MISSING_API_KEY
             )
         }
 
-        return try {
+        try {
             // Dynamic date calculation (e.g., 30 days prior to today)
             val earliestDate = DateUtils.getEarliestPublishDate(30)
 
@@ -67,11 +69,10 @@ class NewsRepository(
                     )
                 }
             } else {
-                val code = response.code()
-                when (code) {
+                when (response.code()) {
                     401 -> NewsResult.Error("Unauthorized: Invalid API key.", ErrorType.INVALID_API_KEY)
                     402, 429 -> NewsResult.Error("API quota or rate limit exceeded.", ErrorType.QUOTA_EXCEEDED)
-                    else -> NewsResult.Error("Server error ($code): ${response.message()}", ErrorType.SERVER_ERROR)
+                    else -> NewsResult.Error("Server error (${response.code()}): ${response.message()}", ErrorType.SERVER_ERROR)
                 }
             }
         } catch (e: IOException) {
