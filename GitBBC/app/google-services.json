@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "174443929750",
+    "project_id": "locallens-6f380",
+    "storage_bucket": "locallens-6f380.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:174443929750:android:5b20683976388d9359a2b7",
+        "android_client_info": {
+          "package_name": "com.st10445368.gitbbc"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "174443929750-3i73mldqpae5v0r92ormh8ckdg91enla.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA30V-DgoRe_qeBJLaiqpk2CcTMfbIBuCE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "174443929750-3i73mldqpae5v0r92ormh8ckdg91enla.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
